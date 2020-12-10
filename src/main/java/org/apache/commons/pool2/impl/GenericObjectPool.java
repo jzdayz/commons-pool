@@ -406,12 +406,14 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
      *                   error
      */
     public T borrowObject(final long borrowMaxWaitMillis) throws Exception {
+        // 检查状态是否是开启的
         assertOpen();
 
         final AbandonedConfig ac = this.abandonedConfig;
         if (ac != null && ac.getRemoveAbandonedOnBorrow() &&
                 (getNumIdle() < 2) &&
                 (getNumActive() > getMaxTotal() - 3) ) {
+            // 开了"借用时移除废弃对象"
             removeAbandoned(ac);
         }
 
