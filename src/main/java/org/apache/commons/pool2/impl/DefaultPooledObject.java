@@ -185,6 +185,7 @@ public class DefaultPooledObject<T> implements PooledObject<T> {
      */
     @Override
     public synchronized boolean allocate() {
+        // 如果状态为空闲，则可以进行分配
         if (state == PooledObjectState.IDLE) {
             state = PooledObjectState.ALLOCATED;
             lastBorrowTime = System.currentTimeMillis();
@@ -194,7 +195,7 @@ public class DefaultPooledObject<T> implements PooledObject<T> {
                 borrowedBy.fillInStackTrace();
             }
             return true;
-        } else if (state == PooledObjectState.EVICTION) {
+        } else if (state == PooledObjectState.EVICTION) {  // 如果状态为驱逐
             // TODO Allocate anyway and ignore eviction test
             state = PooledObjectState.EVICTION_RETURN_TO_HEAD;
             return false;

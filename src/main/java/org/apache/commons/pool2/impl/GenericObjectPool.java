@@ -421,6 +421,7 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
 
         // Get local copy of current config so it is consistent for entire
         // method execution
+        // 当获取不到时，是否进行锁定
         final boolean blockWhenExhausted = getBlockWhenExhausted();
 
         boolean create;
@@ -428,18 +429,22 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
 
         while (p == null) {
             create = false;
+            // 尝试获取对象
             p = idleObjects.pollFirst();
             if (p == null) {
+                // 尝试创建对象
                 p = create();
                 if (p != null) {
                     create = true;
                 }
             }
+            // 如果可以block
             if (blockWhenExhausted) {
                 if (p == null) {
                     if (borrowMaxWaitMillis < 0) {
                         p = idleObjects.takeFirst();
                     } else {
+                        // 在等待的时间内进行获取
                         p = idleObjects.pollFirst(borrowMaxWaitMillis,
                                 TimeUnit.MILLISECONDS);
                     }
@@ -453,20 +458,24 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
                     throw new NoSuchElementException("Pool exhausted");
                 }
             }
+            // 如果不可以分配
             if (!p.allocate()) {
                 p = null;
             }
 
             if (p != null) {
                 try {
+                    // 激活对象
                     factory.activateObject(p);
                 } catch (final Exception e) {
                     try {
+                        // 发生异常，则摧毁对象
                         destroy(p, DestroyMode.NORMAL);
                     } catch (final Exception e1) {
                         // Ignore - activation failure is more important
                     }
                     p = null;
+                    // 如果是创建出来的对象
                     if (create) {
                         final NoSuchElementException nsee = new NoSuchElementException(
                                 "Unable to activate object");
@@ -474,23 +483,29 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
                         throw nsee;
                     }
                 }
+                // 如果需要在借用时测试
                 if (p != null && getTestOnBorrow()) {
                     boolean validate = false;
                     Throwable validationThrowable = null;
                     try {
+                        // 进行测试
                         validate = factory.validateObject(p);
                     } catch (final Throwable t) {
                         PoolUtils.checkRethrow(t);
                         validationThrowable = t;
                     }
+                    // 如果没有校验通过
                     if (!validate) {
                         try {
+                            // 摧毁对象
                             destroy(p, DestroyMode.NORMAL);
+                            // 记录
                             destroyedByBorrowValidationCount.incrementAndGet();
                         } catch (final Exception e) {
                             // Ignore - validation failure is more important
                         }
                         p = null;
+                        // 如果是创建出来的对象，则抛出异常
                         if (create) {
                             final NoSuchElementException nsee = new NoSuchElementException(
                                     "Unable to validate object");
@@ -501,7 +516,7 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
                 }
             }
         }
-
+        // 记录一些状态，指标之类的
         updateStatsBorrow(p, System.currentTimeMillis() - waitTime);
 
         return p.getObject();
@@ -536,12 +551,15 @@ public class GenericObjectPool<T> extends BaseGenericObjectPool<T>
             return; // Object was abandoned and removed
         }
 
+        // 更改状态
         markReturningState(p);
 
         final long activeTime = p.getActiveTimeMillis();
-
+        // 如果"在返回中进行测试"
+        // 如果没有校验通过
         if (getTestOnReturn() && !factory.validateObject(p)) {
             try {
+                // 摧毁之
                 destroy(p, DestroyMode.NORMAL);
             } catch (final Exception e) {
                 swallowException(e);

@@ -992,10 +992,12 @@ public abstract class BaseGenericObjectPool<T> extends BaseObject {
      * @param waitTime time (in milliseconds) that the borrowing thread had to wait
      */
     final void updateStatsBorrow(final PooledObject<T> p, final long waitTime) {
+        // 记录借用条数
         borrowedCount.incrementAndGet();
         idleTimes.add(p.getIdleTimeMillis());
         waitTimes.add(waitTime);
 
+        // 记录最大借用时间
         // lock-free optimistic-locking maximum
         long currentMax;
         do {
@@ -1023,10 +1025,12 @@ public abstract class BaseGenericObjectPool<T> extends BaseObject {
     protected void markReturningState(final PooledObject<T> pooledObject) {
         synchronized(pooledObject) {
             final PooledObjectState state = pooledObject.getState();
+            // 如果状态不是 "分配"
             if (state != PooledObjectState.ALLOCATED) {
                 throw new IllegalStateException(
                         "Object has already been returned to this pool or is invalid");
             }
+            // 设置状态为 返回ing
             pooledObject.markReturning(); // Keep from being marked abandoned
         }
     }
