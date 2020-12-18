@@ -276,6 +276,7 @@ class LinkedBlockingDeque<E> extends AbstractQueue<E>
             return false;
         }
         final Node<E> l = last;
+        // 新建一个node，将last节点变为preNode
         final Node<E> x = new Node<>(e, l, null);
         last = x;
         if (first == null) {
@@ -284,6 +285,7 @@ class LinkedBlockingDeque<E> extends AbstractQueue<E>
             l.next = x;
         }
         ++count;
+        // 唤醒notEmpty的condition的等待
         notEmpty.signal();
         return true;
     }

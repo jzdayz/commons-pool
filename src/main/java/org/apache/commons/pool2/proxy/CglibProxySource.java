@@ -41,6 +41,9 @@ public class CglibProxySource<T> implements ProxySource<T> {
         this.superclass = superclass;
     }
 
+    /**
+     *  创建一个代理
+     */
     @Override
     public T createProxy(final T pooledObject, final UsageTracking<T> usageTracking) {
         final Enhancer enhancer = new Enhancer();
@@ -58,6 +61,9 @@ public class CglibProxySource<T> implements ProxySource<T> {
     }
 
 
+    /**
+     *  关闭代理
+     */
     @Override
     public T resolveProxy(final T proxy) {
         @SuppressWarnings("unchecked")
